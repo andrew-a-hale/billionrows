@@ -15,7 +15,7 @@ impl State {
         }
     }
 
-    fn process(&mut self, row: String) -> Self {
+    fn process(&mut self, row: String) -> Option<Self> {
         let mut values = row.split(';');
         let station = match values.next() {
             Some(x) => String::from(x),
@@ -46,7 +46,7 @@ impl State {
         }
 
         self.map.insert(station, vec);
-        self.clone()
+        Some(self.clone())
     }
 }
 
@@ -58,8 +58,7 @@ fn main() {
     let state = read_lines(filepath)
         .unwrap()
         .scan(State::new(), |state, x| {
-            state.process(x.unwrap());
-            Some(state.clone())
+            state.process(x.unwrap())
         })
         .last()
         .unwrap();

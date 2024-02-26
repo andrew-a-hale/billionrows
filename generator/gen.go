@@ -7,19 +7,34 @@ import (
 	"strconv"
 )
 
-const BATCH_SIZE = 500
+const (
+	BATCH_SIZE     = 500
+	LOCATION_COUNT = 10000
+)
 
-var STATIONS = [10]string{
-	"Brisbane",
-	"Sydney",
-	"Melbourne",
-	"Albury",
-	"Morayfield",
-	"Armadale",
-	"Dalby",
-	"Gold Coast",
-	"Aspley",
-	"Casledine",
+func randomString() string {
+	var bytes []byte
+	for len(bytes) < 8 {
+		byte := byte(rand.Intn(26) + 65)
+		bytes = append(bytes, byte)
+	}
+
+	return string(bytes)
+}
+
+func randomLocations() []string {
+	locsMap := make(map[string]bool, LOCATION_COUNT)
+	for len(locsMap) < LOCATION_COUNT {
+		new_loc := randomString()
+		locsMap[new_loc] = true
+	}
+
+	var locs []string
+	for loc := range locsMap {
+		locs = append(locs, loc)
+	}
+
+	return locs
 }
 
 func writeFile(filepath string) *os.File {
@@ -31,12 +46,23 @@ func writeFile(filepath string) *os.File {
 	return file
 }
 
-func streamRows(file *os.File) {
+func streamRows(file *os.File, loc string) {
 	var bytes []byte
 	for i := 0; i < BATCH_SIZE; i++ {
-		bytes = append(bytes, []byte(STATIONS[i%10])...)
+		// append location
+		bytes = append(bytes, []byte(loc)...)
 		bytes = append(bytes, ';')
+
+		// append sign
+		sign := rand.Float32()
+		if sign < 0.5 {
+			bytes = append(bytes, '-')
+		}
+
+		// append temp
 		bytes = strconv.AppendInt(bytes, rand.Int63n(100), 10)
+		bytes = append(bytes, '.')
+		bytes = strconv.AppendInt(bytes, rand.Int63n(10), 10)
 		bytes = append(bytes, '\n')
 	}
 	file.Write(bytes)
@@ -44,7 +70,8 @@ func streamRows(file *os.File) {
 
 func GenerateFile(filepath string, length int) {
 	file := writeFile(filepath)
+	locs := randomLocations()
 	for i := 0; i < length/BATCH_SIZE; i++ {
-		streamRows(file)
+		streamRows(file, locs[i%LOCATION_COUNT])
 	}
 }

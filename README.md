@@ -9,4 +9,11 @@ of keys and integers.
 
 ## Aggregate
 
-A Rust binary to report statistics about the csv file.
+### Rust
+A Rust binary to report statistics about the csv file. This is very slow!
+
+### duckdb
+Use duckdb with `cat duck.sql | duckdb`
+
+### Go
+Todo!
