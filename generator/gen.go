@@ -10,10 +10,7 @@ import (
 	"sync"
 )
 
-const (
-	LOCATION_COUNT = 10000
-	BATCH_SIZE     = 500000
-)
+const LOCATION_COUNT = 10000
 
 func randomString() string {
 	var bytes []byte
