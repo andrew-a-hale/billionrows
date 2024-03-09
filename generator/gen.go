@@ -1,15 +1,18 @@
 package generator
 
 import (
+	"bufio"
 	"log"
 	"math/rand"
 	"os"
+	"runtime"
 	"strconv"
+	"sync"
 )
 
 const (
-	BATCH_SIZE     = 500
 	LOCATION_COUNT = 10000
+	BATCH_SIZE     = 500000
 )
 
 func randomString() string {
@@ -46,10 +49,11 @@ func writeFile(filepath string) *os.File {
 	return file
 }
 
-func streamRows(file *os.File, loc string) {
+func generateData(locs []string, lines int) []byte {
 	var bytes []byte
-	for i := 0; i < BATCH_SIZE; i++ {
+	for i := 0; i < lines; i++ {
 		// append location
+		loc := locs[i%LOCATION_COUNT]
 		bytes = append(bytes, []byte(loc)...)
 		bytes = append(bytes, ';')
 
@@ -65,13 +69,36 @@ func streamRows(file *os.File, loc string) {
 		bytes = strconv.AppendInt(bytes, rand.Int63n(10), 10)
 		bytes = append(bytes, '\n')
 	}
-	file.Write(bytes)
+
+	return bytes
 }
 
-func GenerateFile(filepath string, length int) {
+func GenerateFile(filepath string, length int) error {
 	file := writeFile(filepath)
+	defer file.Close()
 	locs := randomLocations()
-	for i := 0; i < length/BATCH_SIZE; i++ {
-		streamRows(file, locs[i%LOCATION_COUNT])
+	maxGoRoutines := runtime.GOMAXPROCS(0)
+	chunkSize := length / 100 / maxGoRoutines
+	var wg sync.WaitGroup
+
+	written := 0
+	for written < length {
+		for i := 0; i < maxGoRoutines; i++ {
+			wg.Add(1)
+			startLine := written
+			endLine := min(startLine+chunkSize, length)
+
+			go func(startLine int, endLine int, locs []string, file *os.File, wg *sync.WaitGroup) {
+				writer := bufio.NewWriter(file)
+				writer.Write(generateData(locs, endLine-startLine))
+				writer.Flush()
+				wg.Done()
+			}(startLine, endLine, locs, file, &wg)
+
+			written += chunkSize
+		}
+		wg.Wait()
 	}
+
+	return nil
 }
